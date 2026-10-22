@@ -25,8 +25,16 @@ export const DEFAULT_TASKS: Array<{ title: string; leadDays: number; priority: '
   { title: 'Prepare event-day run sheet', leadDays: 1, priority: 'High' },
 ];
 
+const MAX_BUDGET_LIMIT = 1_000_000_000; // ₹100 Crores
+const MAX_GUEST_LIMIT = 1_000_000;
+const MAX_DAYS_LIMIT = 3_650; // 10 years
+
 export function money(value: number | string): number {
-  return Math.round(Number(value) * 100) / 100;
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return NaN;
+  }
+  return Math.round(num * 100) / 100;
 }
 
 export function formatINR(val: number | string): string {
@@ -45,12 +53,33 @@ export function buildPlan(
   eventType = 'Wedding'
 ): EventPlan {
   const budget = money(budgetInput);
-  const guests = parseInt(String(guestsInput), 10);
-  const days = parseInt(String(daysInput), 10);
+  const guests = Number(guestsInput);
+  const days = Number(daysInput);
 
-  if (budget <= 0 || guests < 1 || days < 0 || isNaN(budget) || isNaN(guests) || isNaN(days)) {
+  if (
+    !Number.isFinite(budget) ||
+    !Number.isFinite(guests) ||
+    !Number.isFinite(days) ||
+    budget <= 0 ||
+    guests < 1 ||
+    days < 0 ||
+    !Number.isInteger(guests) ||
+    !Number.isInteger(days)
+  ) {
     throw new Error('Budget must be positive, guests at least 1, and days cannot be negative.');
   }
+
+  if (budget > MAX_BUDGET_LIMIT) {
+    throw new Error(`Budget cannot exceed ₹${MAX_BUDGET_LIMIT.toLocaleString('en-IN')}.`);
+  }
+  if (guests > MAX_GUEST_LIMIT) {
+    throw new Error(`Guest count cannot exceed ${MAX_GUEST_LIMIT.toLocaleString('en-IN')}.`);
+  }
+  if (days > MAX_DAYS_LIMIT) {
+    throw new Error(`Days until event cannot exceed ${MAX_DAYS_LIMIT} days.`);
+  }
+
+  const sanitizedEventType = String(eventType || 'Wedding').trim().slice(0, 80);
 
   const categories: BudgetCategory[] = DEFAULT_CATEGORIES.map((item) => ({ ...item }));
   const baseTotal = categories.reduce((sum, item) => sum + item.amount, 0);
@@ -60,9 +89,9 @@ export function buildPlan(
     item.amount = Math.round(item.amount * scale);
   }
 
-  // Adjust any rounding difference onto contingency
-  const diff = Math.round(budget - categories.reduce((sum, item) => sum + item.amount, 0));
-  categories[categories.length - 1].amount += diff;
+  // Adjust any rounding difference onto contingency so sum === budget exactly
+  const roundingDiff = Math.round(budget - categories.reduce((sum, item) => sum + item.amount, 0));
+  categories[categories.length - 1].amount += roundingDiff;
 
   const today = new Date();
   const tasks: PlanningTask[] = DEFAULT_TASKS.map((t) => {
@@ -87,7 +116,7 @@ export function buildPlan(
     }));
 
   return {
-    event_type: eventType,
+    event_type: sanitizedEventType,
     budget,
     guests,
     days_until_event: days,
@@ -109,14 +138,23 @@ export function recoverPlan(
   value: number | string,
   category?: string
 ): EventPlan {
+  if (!plan || !Array.isArray(plan.categories) || plan.categories.length === 0) {
+    throw new Error('Valid event plan is required for plan recovery.');
+  }
+
+  // Guarantee source plan immutability through strict deep copy
   const updated: EventPlan = JSON.parse(JSON.stringify(plan));
   const notes: string[] = [];
 
   if (changeType === 'budget') {
     const newBudget = money(value);
-    if (newBudget <= 0 || isNaN(newBudget)) {
+    if (!Number.isFinite(newBudget) || newBudget <= 0) {
       throw new Error('New budget must be greater than zero.');
     }
+    if (newBudget > MAX_BUDGET_LIMIT) {
+      throw new Error(`New budget cannot exceed ₹${MAX_BUDGET_LIMIT.toLocaleString('en-IN')}.`);
+    }
+
     const oldBudget = updated.budget;
     if (newBudget < oldBudget) {
       const reduction = oldBudget - newBudget;
@@ -160,9 +198,13 @@ export function recoverPlan(
     updated.budget = newBudget;
   } else if (changeType === 'vendor_increase') {
     const increase = money(value);
-    if (increase <= 0 || isNaN(increase)) {
+    if (!Number.isFinite(increase) || increase <= 0) {
       throw new Error('Vendor increase must be greater than zero.');
     }
+    if (!category || !updated.categories.some((c) => c.name === category)) {
+      throw new Error('Please select a valid event category for the vendor quote increase.');
+    }
+
     const contingency = updated.categories.find((c) => c.name === 'Contingency')!;
     const covered = Math.min(contingency.amount, increase);
     contingency.amount -= covered;
@@ -192,10 +234,14 @@ export function recoverPlan(
       `Vendor quote increased by ₹${increase.toLocaleString('en-IN')}. Contingency was used first; proposed changes need your approval.`
     );
   } else if (changeType === 'guests') {
-    const newGuests = parseInt(String(value), 10);
-    if (newGuests < 1 || isNaN(newGuests)) {
+    const newGuests = Number(value);
+    if (!Number.isFinite(newGuests) || !Number.isInteger(newGuests) || newGuests < 1) {
       throw new Error('Guest count must be at least one.');
     }
+    if (newGuests > MAX_GUEST_LIMIT) {
+      throw new Error(`Guest count cannot exceed ${MAX_GUEST_LIMIT.toLocaleString('en-IN')}.`);
+    }
+
     const oldGuests = updated.guests;
     updated.guests = newGuests;
     const delta = newGuests - oldGuests;

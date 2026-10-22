@@ -2,14 +2,14 @@
 
 @layer base {
   :root {
-    --ink: #24231f;
-    --muted: #79776f;
+    --ink: #1f1e1a;
+    --muted: #57554e;
     --paper: #f7f5ef;
     --card: #fffefa;
-    --line: #e9e5db;
-    --green: #405b49;
-    --green-soft: #e9eee8;
-    --orange: #bd7651;
+    --line: #dedad0;
+    --green: #354c3c;
+    --green-soft: #e8ede7;
+    --orange: #9c4f2b;
     --orange-soft: #fbf1ea;
     --serif: 'Playfair Display', Georgia, serif;
     --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -29,6 +29,12 @@
   }
 }
 
+/* Accessibility: Clear visible focus outlines */
+:focus-visible {
+  outline: 2.5px solid var(--green);
+  outline-offset: 2px;
+}
+
 /* Button styles matching EventWise UI */
 .button {
   border: 0;
@@ -40,7 +46,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: transform 0.15s, opacity 0.15s, background-color 0.15s;
+  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
 }
 
 .button:hover {
@@ -48,7 +54,7 @@
 }
 
 .button:focus-visible {
-  outline: 3px solid #bd765188;
+  outline: 3px solid var(--orange);
   outline-offset: 2px;
 }
 
@@ -58,7 +64,7 @@
 }
 
 .button.primary:hover {
-  background: #33493a;
+  background: #2a3d30;
 }
 
 .button.secondary, .secondary {
@@ -110,6 +116,38 @@
   font-size: 55px;
   color: #8b9a7b;
   user-select: none;
+}
+
+/* Utility Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Print styling for printing or saving event plan */

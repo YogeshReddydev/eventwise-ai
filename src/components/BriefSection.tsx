@@ -1,63 +1,77 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
 interface BriefSectionProps {
-  eventType: string;
-  setEventType: (val: string) => void;
-  budget: number;
-  setBudget: (val: number) => void;
-  guests: number;
-  setGuests: (val: number) => void;
-  days: number;
-  setDays: (val: number) => void;
-  onBuildPlan: () => void;
+  initialEventType: string;
+  initialBudget: number;
+  initialGuests: number;
+  initialDays: number;
+  onBuildPlan: (budget: number, guests: number, days: number, eventType: string) => void;
   loading: boolean;
 }
 
 export const BriefSection: React.FC<BriefSectionProps> = ({
-  eventType,
-  setEventType,
-  budget,
-  setBudget,
-  guests,
-  setGuests,
-  days,
-  setDays,
+  initialEventType,
+  initialBudget,
+  initialGuests,
+  initialDays,
   onBuildPlan,
   loading,
 }) => {
+  const [eventType, setEventType] = useState(initialEventType);
+  const [budget, setBudget] = useState(initialBudget);
+  const [guests, setGuests] = useState(initialGuests);
+  const [days, setDays] = useState(initialDays);
+
+  // Sync with parent when presets or resets update
+  useEffect(() => {
+    setEventType(initialEventType);
+  }, [initialEventType]);
+
+  useEffect(() => {
+    setBudget(initialBudget);
+  }, [initialBudget]);
+
+  useEffect(() => {
+    setGuests(initialGuests);
+  }, [initialGuests]);
+
+  useEffect(() => {
+    setDays(initialDays);
+  }, [initialDays]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onBuildPlan();
+    onBuildPlan(budget, guests, days, eventType);
   };
 
   return (
-    <section className="bg-white rounded-2xl border border-[#e9e5db] p-6 sm:p-8 mb-8 shadow-xs">
+    <section className="bg-white rounded-2xl border border-[#dedad0] p-6 sm:p-8 mb-8 shadow-xs" aria-labelledby="brief-heading">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#bd7651]">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#9c4f2b]">
             Start with the basics
           </span>
-          <h2 className="text-xl sm:text-2xl font-serif text-[#24231f]">
+          <h2 id="brief-heading" className="text-xl sm:text-2xl font-serif text-[#1f1e1a]">
             Event brief
           </h2>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-medium text-[#79776f] bg-[#f7f5ef] px-3 py-1.5 rounded-full border border-[#e9e5db]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#bd7651]"></span>
+        <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-semibold text-[#57554e] bg-[#f7f5ef] px-3 py-1.5 rounded-full border border-[#dedad0]">
+          <span className="w-2 h-2 rounded-full bg-[#9c4f2b]" aria-hidden="true"></span>
           <span>Starter estimates are customizable</span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" noValidate={false}>
         <div>
-          <label htmlFor="eventType" className="block text-xs font-semibold text-[#5d5b53] mb-1.5">
+          <label htmlFor="eventTypeSelect" className="block text-xs font-bold text-[#1f1e1a] mb-1.5">
             Event type
           </label>
           <select
-            id="eventType"
+            id="eventTypeSelect"
             value={eventType}
             onChange={(e) => setEventType(e.target.value)}
-            className="w-full h-11 px-3.5 rounded-xl border border-[#d8d4c7] bg-white text-sm text-[#24231f] focus:outline-none focus:ring-2 focus:ring-[#405b49] focus:border-[#405b49] transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-[#dedad0] bg-[#fffefa] text-xs font-medium text-[#1f1e1a] focus:outline-none focus:ring-2 focus:ring-[#354c3c] transition-all cursor-pointer"
           >
             <option value="Wedding">Wedding</option>
             <option value="Birthday">Birthday</option>
@@ -66,64 +80,71 @@ export const BriefSection: React.FC<BriefSectionProps> = ({
         </div>
 
         <div>
-          <label htmlFor="totalBudget" className="block text-xs font-semibold text-[#5d5b53] mb-1.5">
+          <label htmlFor="totalBudgetInput" className="block text-xs font-bold text-[#1f1e1a] mb-1.5">
             Total budget (₹)
           </label>
           <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[#79776f] font-semibold">₹</span>
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[#57554e] font-semibold" aria-hidden="true">₹</span>
             <input
-              id="totalBudget"
+              id="totalBudgetInput"
               type="number"
               min="1000"
+              max="1000000000"
               step="1000"
               value={budget}
               onChange={(e) => setBudget(Number(e.target.value))}
               required
-              className="w-full h-11 pl-8 pr-3.5 rounded-xl border border-[#d8d4c7] bg-white text-sm text-[#24231f] font-medium focus:outline-none focus:ring-2 focus:ring-[#405b49] focus:border-[#405b49] transition-all"
+              aria-label="Total event budget in rupees"
+              className="w-full h-11 pl-8 pr-3.5 rounded-xl border border-[#dedad0] bg-[#fffefa] text-xs font-semibold text-[#1f1e1a] focus:outline-none focus:ring-2 focus:ring-[#354c3c] transition-all"
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="guestCount" className="block text-xs font-semibold text-[#5d5b53] mb-1.5">
+          <label htmlFor="guestCountInput" className="block text-xs font-bold text-[#1f1e1a] mb-1.5">
             Guest count
           </label>
           <input
-            id="guestCount"
+            id="guestCountInput"
             type="number"
             min="1"
+            max="1000000"
             value={guests}
             onChange={(e) => setGuests(Number(e.target.value))}
             required
-            className="w-full h-11 px-3.5 rounded-xl border border-[#d8d4c7] bg-white text-sm text-[#24231f] font-medium focus:outline-none focus:ring-2 focus:ring-[#405b49] focus:border-[#405b49] transition-all"
+            aria-label="Expected number of guests"
+            className="w-full h-11 px-3.5 rounded-xl border border-[#dedad0] bg-[#fffefa] text-xs font-semibold text-[#1f1e1a] focus:outline-none focus:ring-2 focus:ring-[#354c3c] transition-all"
           />
         </div>
 
         <div>
-          <label htmlFor="daysToEvent" className="block text-xs font-semibold text-[#5d5b53] mb-1.5">
+          <label htmlFor="daysToEventInput" className="block text-xs font-bold text-[#1f1e1a] mb-1.5">
             Days to event
           </label>
           <div className="flex gap-2">
             <input
-              id="daysToEvent"
+              id="daysToEventInput"
               type="number"
               min="0"
+              max="3650"
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
               required
-              className="w-full h-11 px-3.5 rounded-xl border border-[#d8d4c7] bg-white text-sm text-[#24231f] font-medium focus:outline-none focus:ring-2 focus:ring-[#405b49] focus:border-[#405b49] transition-all"
+              aria-label="Number of days remaining until the event"
+              className="w-full h-11 px-3.5 rounded-xl border border-[#dedad0] bg-[#fffefa] text-xs font-semibold text-[#1f1e1a] focus:outline-none focus:ring-2 focus:ring-[#354c3c] transition-all"
             />
             <button
               type="submit"
               disabled={loading}
-              className="h-11 px-4 rounded-xl bg-[#405b49] hover:bg-[#344a3c] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all hover:shadow cursor-pointer shrink-0 disabled:opacity-50"
+              className="button primary h-11 shrink-0"
+              aria-label="Build customized plan"
             >
               {loading ? (
-                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-label="Loading"></span>
               ) : (
                 <>
                   <span>Build plan</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </>
               )}
             </button>

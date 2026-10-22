@@ -8,19 +8,19 @@ interface BudgetPieChartProps {
   totalBudget: number;
 }
 
-// Earthy, refined palette tailored to EventWise AI's aesthetic
+// Earthy, refined palette tailored to EventWise AI's aesthetic with high contrast
 export const CATEGORY_COLORS: Record<string, string> = {
-  'Venue': '#344e41',               // Deep forest green
-  'Catering': '#405b49',            // Sage forest
-  'Decorations': '#bd7651',         // Warm terracotta
-  'Photography': '#8b9a7b',         // Muted olive
-  'Clothing & makeup': '#c48b62',   // Warm amber clay
-  'Transport': '#7a8b7b',           // Soft sage slate
-  'Invitations & gifts': '#d4a373', // Warm sand ochre
+  'Venue': '#2d4337',               // Deep forest green
+  'Catering': '#3b5443',            // Sage forest
+  'Decorations': '#9c4f2b',         // Warm terracotta
+  'Photography': '#758368',         // Olive green
+  'Clothing & makeup': '#b57849',   // Warm amber clay
+  'Transport': '#667768',           // Slate sage
+  'Invitations & gifts': '#bf8c56', // Ochre
   'Contingency': '#82532e',         // Bronze safety buffer
 };
 
-const DEFAULT_FALLBACK_COLOR = '#6b7280';
+const DEFAULT_FALLBACK_COLOR = '#57554e';
 
 export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, totalBudget }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -74,10 +74,16 @@ export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, tota
       : null;
 
   return (
-    <div className="flex flex-col items-center">
+    <div
+      role="region"
+      aria-label="Category distribution donut chart"
+      className="flex flex-col items-center"
+    >
       {/* SVG Donut / Pie Chart */}
       <div className="relative w-[240px] h-[240px] select-none">
         <svg
+          role="img"
+          aria-label={`Donut chart showing budget distribution across ${categories.length} categories totaling ${formatINR(totalAmount)}`}
           width={width}
           height={height}
           viewBox={`0 0 ${width} ${height}`}
@@ -99,7 +105,7 @@ export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, tota
                   onMouseEnter={() => setHoveredIdx(i)}
                   onMouseLeave={() => setHoveredIdx(null)}
                   style={{
-                    filter: isHovered ? 'drop-shadow(0px 3px 6px rgba(0,0,0,0.2))' : 'none',
+                    filter: isHovered ? 'drop-shadow(0px 3px 6px rgba(0,0,0,0.25))' : 'none',
                   }}
                 />
               );
@@ -108,28 +114,28 @@ export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, tota
         </svg>
 
         {/* Center Readout Text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4" aria-hidden="true">
           {activeCategory ? (
             <>
-              <span className="text-[10px] uppercase font-bold text-[#bd7651] tracking-wider truncate max-w-[110px]">
+              <span className="text-[10px] uppercase font-bold text-[#9c4f2b] tracking-wider truncate max-w-[110px]">
                 {activeCategory.name}
               </span>
-              <span className="text-sm font-bold text-[#24231f] font-mono leading-tight">
+              <span className="text-sm font-bold text-[#1f1e1a] font-mono leading-tight">
                 {formatINR(activeCategory.amount)}
               </span>
-              <span className="text-[10px] text-[#79776f] font-semibold mt-0.5">
+              <span className="text-[10px] text-[#57554e] font-semibold mt-0.5">
                 {activePercentage}% share
               </span>
             </>
           ) : (
             <>
-              <span className="text-[10px] uppercase font-bold text-[#79776f] tracking-wider">
+              <span className="text-[10px] uppercase font-bold text-[#57554e] tracking-wider">
                 Total Planned
               </span>
-              <span className="text-sm font-bold text-[#24231f] font-mono leading-tight">
+              <span className="text-sm font-bold text-[#1f1e1a] font-mono leading-tight">
                 {formatINR(totalAmount)}
               </span>
-              <span className="text-[9px] text-[#969187] mt-0.5">
+              <span className="text-[9px] text-[#57554e] mt-0.5">
                 Hover slice to inspect
               </span>
             </>
@@ -160,16 +166,17 @@ export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, tota
                     backgroundColor: color,
                     transform: isHovered ? 'scale(1.25)' : 'scale(1)',
                   }}
+                  aria-hidden="true"
                 />
                 <span
                   className={`text-[11px] truncate ${
-                    isHovered ? 'font-bold text-[#24231f]' : 'text-[#5d5b53]'
+                    isHovered ? 'font-bold text-[#1f1e1a]' : 'text-[#33322d]'
                   }`}
                 >
                   {c.name}
                 </span>
               </div>
-              <span className="text-[10px] text-[#79776f] font-mono ml-1 shrink-0">
+              <span className="text-[10px] text-[#57554e] font-mono ml-1 shrink-0 font-medium">
                 {pct}%
               </span>
             </div>

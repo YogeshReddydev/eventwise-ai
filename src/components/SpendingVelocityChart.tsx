@@ -9,12 +9,24 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { TrendingDown, Activity, ShieldAlert, Sparkles } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { EventPlan } from '../types.ts';
 import { formatINR } from '../planner.ts';
 
 interface SpendingVelocityChartProps {
   plan: EventPlan;
+}
+
+interface TooltipPayloadItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
 }
 
 export const SpendingVelocityChart: React.FC<SpendingVelocityChartProps> = ({ plan }) => {
@@ -71,15 +83,15 @@ export const SpendingVelocityChart: React.FC<SpendingVelocityChartProps> = ({ pl
     return `₹${val}`;
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-[#fffefa] p-3 rounded-xl border border-[#dedad0] shadow-md text-xs">
-          <p className="font-bold text-[#24231f] mb-1.5 border-b border-[#f0ede4] pb-1">
+          <p className="font-bold text-[#1f1e1a] mb-1.5 border-b border-[#f0ede4] pb-1">
             {label === 'Event' ? 'Event Day' : `${label} to go`}
           </p>
           <div className="space-y-1">
-            {payload.map((entry: any, index: number) => (
+            {payload.map((entry, index) => (
               <p
                 key={`item-${index}`}
                 className="flex items-center justify-between gap-3 text-[11px]"
@@ -89,6 +101,7 @@ export const SpendingVelocityChart: React.FC<SpendingVelocityChartProps> = ({ pl
                   <span
                     className="w-2 h-2 rounded-full inline-block"
                     style={{ backgroundColor: entry.color }}
+                    aria-hidden="true"
                   />
                   <span>{entry.name}:</span>
                 </span>
@@ -103,25 +116,29 @@ export const SpendingVelocityChart: React.FC<SpendingVelocityChartProps> = ({ pl
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-[#dfdcd0] bg-[#faf8f2] rounded-xl p-4 border border-[#e8e4d8]">
+    <div
+      role="region"
+      aria-label="Spending velocity chart: days to go versus budget remaining runway"
+      className="mt-4 pt-4 border-t border-[#dfdcd0] bg-[#faf8f2] rounded-xl p-4 border border-[#e8e4d8]"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-[#405b49]" />
+          <Activity className="w-4 h-4 text-[#354c3c]" aria-hidden="true" />
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#bd7651]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c4f2b]">
               Spending Velocity
             </span>
-            <h3 className="text-xs font-bold text-[#24231f]">
+            <h3 className="text-xs font-bold text-[#1f1e1a]">
               Days to Go vs. Budget Remaining Runway
             </h3>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="px-2 py-0.5 rounded-full bg-[#e9eee8] text-[#405b49] font-medium border border-[#d6dfd5]">
+          <span className="px-2.5 py-1 rounded-full bg-[#e8ede7] text-[#2f4335] font-semibold border border-[#cbd5cb]">
             Target Pace: ~{formatINR(dailyVelocity)}/day
           </span>
-          <span className="px-2 py-0.5 rounded-full bg-[#fbf1ea] text-[#bd7651] font-semibold border border-[#f4dfd4]">
+          <span className="px-2.5 py-1 rounded-full bg-[#fbf1ea] text-[#864c24] font-bold border border-[#f4dfd4]">
             Uncommitted: {formatINR(currentRemaining)}
           </span>
         </div>
@@ -133,13 +150,13 @@ export const SpendingVelocityChart: React.FC<SpendingVelocityChartProps> = ({ pl
             <CartesianGrid strokeDasharray="3 3" stroke="#e8e4d8" vertical={false} />
             <XAxis
               dataKey="name"
-              stroke="#79776f"
+              stroke="#57554e"
               fontSize={11}
               tickLine={false}
               axisLine={{ stroke: '#dedad0' }}
             />
             <YAxis
-              stroke="#79776f"
+              stroke="#57554e"
               fontSize={10}
               tickLine={false}
               axisLine={false}
@@ -154,24 +171,24 @@ export const SpendingVelocityChart: React.FC<SpendingVelocityChartProps> = ({ pl
             <Line
               type="monotone"
               dataKey="Target Runway"
-              stroke="#405b49"
+              stroke="#354c3c"
               strokeWidth={2.5}
               strokeDasharray="4 4"
-              dot={{ r: 3, fill: '#405b49' }}
+              dot={{ r: 3, fill: '#354c3c' }}
               activeDot={{ r: 5 }}
             />
             <Line
               type="monotone"
               dataKey="Remaining Budget"
-              stroke="#bd7651"
+              stroke="#9c4f2b"
               strokeWidth={2.5}
-              dot={{ r: 3, fill: '#bd7651' }}
+              dot={{ r: 3, fill: '#9c4f2b' }}
               activeDot={{ r: 5 }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-[10px] text-[#969187] mt-1 text-right">
+      <p className="text-[10px] text-[#57554e] mt-1 text-right">
         Tracking projected spend milestones ensures contingency remains untouched until needed.
       </p>
     </div>

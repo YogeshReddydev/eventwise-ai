@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { EventPlan, PlanningTask, VendorItem } from './types.ts';
 import { buildPlan } from './planner.ts';
 import { Navbar } from './components/Navbar.tsx';
@@ -17,11 +17,12 @@ export default function App() {
   const [budget, setBudget] = useState<number>(100000);
   const [guests, setGuests] = useState<number>(150);
   const [days, setDays] = useState<number>(60);
+  // Deterministic starter plan initialized directly without redundant initial HTTP request
   const [plan, setPlan] = useState<EventPlan>(() => buildPlan(100000, 150, 60, 'Wedding'));
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPlan = async (b = budget, g = guests, d = days, e = eventType) => {
+  const fetchPlan = useCallback(async (b: number, g: number, d: number, e: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -36,24 +37,29 @@ export default function App() {
       }
       const data: EventPlan = await res.json();
       setPlan(data);
-    } catch (err: any) {
-      console.warn('API error, falling back to local deterministic calculation:', err);
+      setBudget(b);
+      setGuests(g);
+      setDays(d);
+      setEventType(e);
+    } catch (err: unknown) {
+      console.warn('Network request failed, calculating deterministically locally');
       try {
         const local = buildPlan(b, g, d, e);
         setPlan(local);
-      } catch (localErr: any) {
-        setError(localErr.message || 'Error creating plan.');
+        setBudget(b);
+        setGuests(g);
+        setDays(d);
+        setEventType(e);
+      } catch (localErr: unknown) {
+        const message = localErr instanceof Error ? localErr.message : 'Error creating plan.';
+        setError(message);
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchPlan(100000, 150, 60, 'Wedding');
   }, []);
 
-  const handleUpdateCategoryAmount = (index: number, newAmount: number) => {
+  const handleUpdateCategoryAmount = useCallback((index: number, newAmount: number) => {
     setPlan((prev) => {
       const updatedCategories = [...prev.categories];
       updatedCategories[index] = { ...updatedCategories[index], amount: newAmount };
@@ -62,9 +68,9 @@ export default function App() {
         categories: updatedCategories,
       };
     });
-  };
+  }, []);
 
-  const handleRebalanceToTotal = () => {
+  const handleRebalanceToTotal = useCallback(() => {
     setPlan((prev) => {
       const updated = buildPlan(prev.budget, prev.guests, prev.days_until_event, prev.event_type);
       return {
@@ -72,15 +78,15 @@ export default function App() {
         categories: updated.categories,
       };
     });
-  };
+  }, []);
 
-  const handleAcceptRecovery = (newPlan: EventPlan) => {
+  const handleAcceptRecovery = useCallback((newPlan: EventPlan) => {
     setPlan(newPlan);
     setBudget(newPlan.budget);
     setGuests(newPlan.guests);
-  };
+  }, []);
 
-  const handleToggleTask = (index: number) => {
+  const handleToggleTask = useCallback((index: number) => {
     setPlan((prev) => {
       const updatedTasks = [...prev.tasks];
       updatedTasks[index] = {
@@ -89,75 +95,71 @@ export default function App() {
       };
       return { ...prev, tasks: updatedTasks };
     });
-  };
+  }, []);
 
-  const handleAddTask = (task: PlanningTask) => {
+  const handleAddTask = useCallback((task: PlanningTask) => {
     setPlan((prev) => ({
       ...prev,
       tasks: [task, ...prev.tasks],
     }));
-  };
+  }, []);
 
-  const handleUpdateVendor = (index: number, updated: Partial<VendorItem>) => {
+  const handleUpdateVendor = useCallback((index: number, updated: Partial<VendorItem>) => {
     setPlan((prev) => {
       const updatedVendors = [...prev.vendors];
       updatedVendors[index] = { ...updatedVendors[index], ...updated };
       return { ...prev, vendors: updatedVendors };
     });
-  };
+  }, []);
 
-  const handleAddVendor = (vendor: VendorItem) => {
+  const handleAddVendor = useCallback((vendor: VendorItem) => {
     setPlan((prev) => ({
       ...prev,
       vendors: [...prev.vendors, vendor],
     }));
-  };
+  }, []);
 
-  const handleDeleteVendor = (index: number) => {
+  const handleDeleteVendor = useCallback((index: number) => {
     setPlan((prev) => ({
       ...prev,
       vendors: prev.vendors.filter((_, i) => i !== index),
     }));
-  };
+  }, []);
 
-  const handleSelectPreset = (b: number, g: number, d: number, e: string) => {
-    setBudget(b);
-    setGuests(g);
-    setDays(d);
-    setEventType(e);
+  const handleSelectPreset = useCallback((b: number, g: number, d: number, e: string) => {
     fetchPlan(b, g, d, e);
-  };
+  }, [fetchPlan]);
 
-  const handleReset = () => {
-    setBudget(100000);
-    setGuests(150);
-    setDays(60);
-    setEventType('Wedding');
+  const handleReset = useCallback(() => {
     fetchPlan(100000, 150, 60, 'Wedding');
-  };
+  }, [fetchPlan]);
 
   return (
-    <div className="min-h-screen bg-[#f7f5ef] text-[#24231f] flex flex-col font-sans selection:bg-[#405b49] selection:text-white">
+    <div className="min-h-screen bg-[#f7f5ef] text-[#1f1e1a] flex flex-col font-sans selection:bg-[#354c3c] selection:text-white">
+      {/* Accessibility Skip Link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#354c3c] focus:text-white focus:rounded-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#9c4f2b]"
+      >
+        Skip to main content
+      </a>
+
       <Navbar plan={plan} onSelectPreset={handleSelectPreset} onReset={handleReset} />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main id="main-content" className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8" tabIndex={-1}>
         <HeroSection />
 
         <BriefSection
-          eventType={eventType}
-          setEventType={setEventType}
-          budget={budget}
-          setBudget={setBudget}
-          guests={guests}
-          setGuests={setGuests}
-          days={days}
-          setDays={setDays}
-          onBuildPlan={() => fetchPlan(budget, guests, days, eventType)}
+          initialEventType={eventType}
+          initialBudget={budget}
+          initialGuests={guests}
+          initialDays={days}
+          onBuildPlan={(b, g, d, e) => fetchPlan(b, g, d, e)}
           loading={loading}
         />
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-[#fdf3f0] border border-[#f4cfc4] text-[#93371a] text-sm">
+          <div role="alert" className="mb-6 p-4 rounded-xl bg-[#fdf3f0] border border-[#f4cfc4] text-[#93371a] text-sm">
             {error}
           </div>
         )}
