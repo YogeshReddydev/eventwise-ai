@@ -9,6 +9,7 @@ export interface BudgetCategory {
 
 export interface PlanningTask {
   title: string;
+  category?: string;
   due_date: string;
   priority: Priority;
   done: boolean;

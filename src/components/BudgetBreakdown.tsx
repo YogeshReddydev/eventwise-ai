@@ -16,10 +16,32 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({
   onRebalanceToTotal,
 }) => {
   const [viewMode, setViewMode] = useState<'list' | 'chart'>('list');
-
   const currentTotal = plan.categories.reduce((sum, c) => sum + c.amount, 0);
   const difference = currentTotal - plan.budget;
   const isBalanced = Math.abs(difference) === 0;
+
+  const totalSpent = plan.vendors
+    ? plan.vendors
+        .filter((v) => v.status === 'Booked' || v.status === 'Paid')
+        .reduce((sum, v) => sum + (v.quote || 0), 0)
+    : 0;
+
+  const paidAmount = plan.vendors
+    ? plan.vendors
+        .filter((v) => v.status === 'Paid')
+        .reduce((sum, v) => sum + (v.quote || 0), 0)
+    : 0;
+
+  const bookedAmount = plan.vendors
+    ? plan.vendors
+        .filter((v) => v.status === 'Booked')
+        .reduce((sum, v) => sum + (v.quote || 0), 0)
+    : 0;
+
+  const remainingBudget = plan.budget - totalSpent;
+  const spentPercent = plan.budget > 0 ? Math.min(100, Math.max(0, (totalSpent / plan.budget) * 100)) : 0;
+  const remainingPercent = Math.max(0, 100 - spentPercent);
+  const isOverBudget = remainingBudget < 0;
 
   return (
     <article className="bg-[#fffefa] rounded-2xl border border-[#e9e5db] p-6 shadow-xs flex flex-col justify-between">
@@ -63,6 +85,57 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({
 
             <span className="text-xs px-2.5 py-1 rounded-full bg-[#e9eee8] text-[#405b49] font-medium border border-[#d6dfd5] hidden sm:inline-block">
               Editable plan
+            </span>
+          </div>
+        </div>
+
+        {/* Visual Progress Bar: Total Spent vs. Remaining Budget */}
+        <div className="mb-5 p-4 rounded-xl bg-[#faf8f2] border border-[#e8e4d8]">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-[#24231f]">Total Spent / Committed</span>
+              <span className="text-[11px] text-[#79776f] font-mono">
+                ({spentPercent.toFixed(0)}%)
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-right">
+              <span className="font-bold text-[#405b49]">Remaining Budget</span>
+              <span className="text-[11px] text-[#79776f] font-mono">
+                ({remainingPercent.toFixed(0)}%)
+              </span>
+            </div>
+          </div>
+
+          {/* Dual Segmented Progress Bar */}
+          <div className="h-2.5 w-full bg-[#e8e4d8] rounded-full overflow-hidden flex">
+            <div
+              className={`h-full transition-all duration-500 rounded-l-full ${
+                isOverBudget ? 'bg-[#b43924]' : 'bg-[#bd7651]'
+              }`}
+              style={{ width: `${spentPercent}%` }}
+              title={`Spent/Committed: ${formatINR(totalSpent)}`}
+            />
+            <div
+              className="h-full bg-[#405b49] transition-all duration-500 rounded-r-full"
+              style={{ width: `${remainingPercent}%` }}
+              title={`Remaining: ${formatINR(Math.max(0, remainingBudget))}`}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-xs mt-2 font-mono">
+            <div>
+              <span className="font-bold text-[#24231f]">{formatINR(totalSpent)}</span>
+              {totalSpent > 0 && (
+                <span className="text-[10px] text-[#79776f] font-sans ml-1.5 hidden sm:inline">
+                  (Paid: {formatINR(paidAmount)} · Booked: {formatINR(bookedAmount)})
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] text-[#79776f] font-sans">
+              Target: <strong className="text-[#24231f] font-mono">{formatINR(plan.budget)}</strong>
+            </span>
+            <span className={`font-bold ${isOverBudget ? 'text-[#b43924]' : 'text-[#405b49]'}`}>
+              {formatINR(Math.max(0, remainingBudget))}
             </span>
           </div>
         </div>
