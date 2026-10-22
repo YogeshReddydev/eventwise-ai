@@ -26,71 +26,80 @@ export const Navbar: React.FC<NavbarProps> = ({ plan, onSelectPreset, onReset })
   };
 
   return (
-    <header className="h-[72px] bg-[#fbfaf6] border-b border-[#e9e5db] px-4 md:px-8 flex items-center justify-between sticky top-0 z-40">
+    <header className="h-[72px] bg-[#fbfaf6] border-b border-[#dedad0] px-4 md:px-8 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-4">
-        <a href="/" className="flex items-center gap-2.5 text-[#24231f] font-bold text-lg tracking-tight no-underline group">
-          <span className="w-8 h-8 rounded-xl bg-[#405b49] text-white flex items-center justify-center font-serif text-xl shadow-xs group-hover:scale-105 transition-transform">
+        <a href="/" className="flex items-center gap-2.5 text-[#1f1e1a] font-bold text-lg tracking-tight no-underline group focus:outline-none focus:ring-2 focus:ring-[#354c3c] rounded-xl p-1">
+          <span className="w-8 h-8 rounded-xl bg-[#354c3c] text-white flex items-center justify-center font-serif text-xl shadow-xs group-hover:scale-105 transition-transform" aria-hidden="true">
             E
           </span>
           <span className="flex items-center gap-1 font-sans">
             <span>EventWise</span>
-            <span className="text-[#405b49] font-black">AI</span>
+            <span className="text-[#354c3c] font-black">AI</span>
           </span>
         </a>
 
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e9eee8] text-[#405b49] text-xs font-semibold">
-          <span className="w-2 h-2 rounded-full bg-[#64886d] animate-pulse"></span>
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e9eee8] text-[#354c3c] text-xs font-semibold">
+          <span className="w-2 h-2 rounded-full bg-[#354c3c] animate-pulse" aria-hidden="true"></span>
           <span>Smart planning workspace</span>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="hidden md:flex items-center gap-1.5 bg-[#f0eee7] p-1 rounded-lg text-xs font-medium">
-          <span className="text-[#79776f] px-2 text-[11px]">Presets:</span>
+        <nav aria-label="Preset plan configurations" className="hidden md:flex items-center gap-1.5 bg-[#f0eee7] p-1 rounded-lg text-xs font-medium">
+          <span className="text-[#57554e] px-2 text-[11px]">Presets:</span>
           <button
+            type="button"
             onClick={() => onSelectPreset(100000, 150, 60, 'Wedding')}
-            className="px-2.5 py-1 rounded bg-white text-[#24231f] hover:text-[#405b49] shadow-2xs hover:bg-[#faf9f5] transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded bg-white text-[#1f1e1a] hover:text-[#354c3c] shadow-2xs hover:bg-[#faf9f5] transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#354c3c]"
           >
             Wedding ₹1L
           </button>
           <button
+            type="button"
             onClick={() => onSelectPreset(35000, 40, 20, 'Birthday')}
-            className="px-2.5 py-1 rounded bg-white text-[#24231f] hover:text-[#405b49] shadow-2xs hover:bg-[#faf9f5] transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded bg-white text-[#1f1e1a] hover:text-[#354c3c] shadow-2xs hover:bg-[#faf9f5] transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#354c3c]"
           >
             Birthday ₹35k
           </button>
           <button
+            type="button"
             onClick={() => onSelectPreset(150000, 200, 45, 'Community event')}
-            className="px-2.5 py-1 rounded bg-white text-[#24231f] hover:text-[#405b49] shadow-2xs hover:bg-[#faf9f5] transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded bg-white text-[#1f1e1a] hover:text-[#354c3c] shadow-2xs hover:bg-[#faf9f5] transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#354c3c]"
           >
             Community ₹1.5L
           </button>
-        </div>
+        </nav>
 
         <button
+          type="button"
           onClick={handlePrint}
           title="Print or save as PDF"
-          className="p-2 text-[#5d5b53] hover:text-[#24231f] hover:bg-[#eeece3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+          aria-label="Print or save event plan as PDF"
+          className="p-2 text-[#57554e] hover:text-[#1f1e1a] hover:bg-[#eeece3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#354c3c]"
         >
-          <Printer className="w-4 h-4" />
+          <Printer className="w-4 h-4" aria-hidden="true" />
           <span className="hidden lg:inline">Print</span>
         </button>
 
         <button
+          type="button"
           onClick={handleExportJSON}
           title="Export plan as JSON file"
-          className="p-2 text-[#5d5b53] hover:text-[#24231f] hover:bg-[#eeece3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+          aria-label="Export event plan as JSON file"
+          className="p-2 text-[#57554e] hover:text-[#1f1e1a] hover:bg-[#eeece3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#354c3c]"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-4 h-4" aria-hidden="true" />
           <span className="hidden lg:inline">Export</span>
         </button>
 
         <button
+          type="button"
           onClick={onReset}
           title="Reset to default ₹1,00,000 Wedding plan"
-          className="p-2 text-[#5d5b53] hover:text-[#24231f] hover:bg-[#eeece3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+          aria-label="Reset to default ₹1,00,000 Wedding plan"
+          className="p-2 text-[#57554e] hover:text-[#1f1e1a] hover:bg-[#eeece3] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#354c3c]"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline">Reset</span>
         </button>
       </div>

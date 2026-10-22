@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Check, Download, Plus, Search, Trash2, Users, X } from 'lucide-react';
 import { EventPlan, VendorItem, VendorStatus } from '../types.ts';
 import { formatINR } from '../planner.ts';
@@ -30,19 +30,28 @@ export const VendorChecklist: React.FC<VendorChecklistProps> = ({
   const [newVendorName, setNewVendorName] = useState('');
   const [newQuote, setNewQuote] = useState(10000);
 
-  const totalCommitted = plan.vendors.reduce((sum, v) => sum + (v.quote || 0), 0);
-  const bookedCount = plan.vendors.filter((v) => v.status === 'Booked' || v.status === 'Paid').length;
+  const totalCommitted = useMemo(
+    () => plan.vendors.reduce((sum, v) => sum + (v.quote || 0), 0),
+    [plan.vendors]
+  );
 
-  const filteredVendors = plan.vendors
-    .map((v, originalIdx) => ({ v, originalIdx }))
-    .filter(({ v }) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      return (
-        v.category.toLowerCase().includes(q) ||
-        (v.vendor && v.vendor.toLowerCase().includes(q))
-      );
-    });
+  const bookedCount = useMemo(
+    () => plan.vendors.filter((v) => v.status === 'Booked' || v.status === 'Paid').length,
+    [plan.vendors]
+  );
+
+  const filteredVendors = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return plan.vendors
+      .map((v, originalIdx) => ({ v, originalIdx }))
+      .filter(({ v }) => {
+        if (!q) return true;
+        return (
+          v.category.toLowerCase().includes(q) ||
+          (v.vendor && v.vendor.toLowerCase().includes(q))
+        );
+      });
+  }, [plan.vendors, searchQuery]);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,33 +97,36 @@ export const VendorChecklist: React.FC<VendorChecklistProps> = ({
   };
 
   return (
-    <section className="bg-white rounded-2xl border border-[#e9e5db] p-6 sm:p-8 mb-8 shadow-xs">
+    <section className="bg-white rounded-2xl border border-[#dedad0] p-6 sm:p-8 mb-8 shadow-xs" aria-labelledby="vendor-checklist-heading">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#bd7651]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#9c4f2b]">
             People who make it happen
           </span>
-          <h2 className="text-xl sm:text-2xl font-serif text-[#24231f]">Vendor checklist</h2>
+          <h2 id="vendor-checklist-heading" className="text-xl sm:text-2xl font-serif text-[#1f1e1a]">Vendor checklist</h2>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="text-xs text-[#5d5b53] hidden md:block">
-            <span className="font-semibold text-[#24231f]">{bookedCount}</span> of{' '}
-            <span className="font-semibold text-[#24231f]">{plan.vendors.length}</span> confirmed
+          <div className="text-xs text-[#57554e] hidden md:block">
+            <span className="font-semibold text-[#1f1e1a]">{bookedCount}</span> of{' '}
+            <span className="font-semibold text-[#1f1e1a]">{plan.vendors.length}</span> confirmed
           </div>
           <button
             onClick={handleExportCSV}
             title={searchQuery.trim() ? "Export filtered vendors as CSV file" : "Export vendor table as CSV file"}
+            aria-label="Export vendor table as CSV file"
             className="button secondary"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Export CSV</span>
           </button>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
+            aria-expanded={showAddForm}
+            aria-controls="add-vendor-form"
             className="button primary"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Add vendor</span>
           </button>
         </div>
@@ -123,79 +135,82 @@ export const VendorChecklist: React.FC<VendorChecklistProps> = ({
       {/* Search Input Field */}
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-[#79776f] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[#57554e] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search vendors by name or category..."
-            className="w-full h-9 pl-9 pr-8 rounded-xl border border-[#dedbd1] bg-[#faf8f2] text-xs text-[#24231f] placeholder:text-[#969187] focus:outline-none focus:ring-2 focus:ring-[#405b49] focus:bg-white transition-all"
+            className="w-full h-9 pl-9 pr-8 rounded-xl border border-[#dedbd1] bg-[#faf8f2] text-xs text-[#1f1e1a] placeholder:text-[#57554e] focus:outline-none focus:ring-2 focus:ring-[#354c3c] focus:bg-white transition-all"
             aria-label="Filter vendors by name or category"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#79776f] hover:text-[#24231f] p-0.5 rounded cursor-pointer"
-              title="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#57554e] hover:text-[#1f1e1a] p-0.5 rounded cursor-pointer"
+              aria-label="Clear vendor search filter"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           )}
         </div>
 
         {searchQuery.trim() && (
-          <div className="text-xs text-[#79776f]">
+          <div className="text-xs text-[#57554e]" role="status" aria-live="polite">
             Showing <strong>{filteredVendors.length}</strong> of {plan.vendors.length} vendors
           </div>
         )}
       </div>
 
       {showAddForm && (
-        <form onSubmit={handleAddSubmit} className="mb-6 p-4 rounded-xl bg-[#faf8f2] border border-[#e8e4d8] grid grid-cols-1 sm:grid-cols-4 gap-3 items-end animate-fadeIn">
+        <form id="add-vendor-form" onSubmit={handleAddSubmit} className="mb-6 p-4 rounded-xl bg-[#faf8f2] border border-[#e8e4d8] grid grid-cols-1 sm:grid-cols-4 gap-3 items-end animate-fadeIn">
           <div>
-            <label className="block text-xs font-semibold text-[#5d5b53] mb-1">Category</label>
+            <label htmlFor="newVendorCategoryInput" className="block text-xs font-semibold text-[#1f1e1a] mb-1">Category</label>
             <input
+              id="newVendorCategoryInput"
               type="text"
               required
               placeholder="e.g. DJ & Sound"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#24231f] focus:outline-none focus:ring-2 focus:ring-[#405b49]"
+              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#1f1e1a] focus:outline-none focus:ring-2 focus:ring-[#354c3c]"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#5d5b53] mb-1">Vendor / contact name</label>
+            <label htmlFor="newVendorNameInput" className="block text-xs font-semibold text-[#1f1e1a] mb-1">Vendor / contact name</label>
             <input
+              id="newVendorNameInput"
               type="text"
               placeholder="e.g. Rhythm Beats Studio"
               value={newVendorName}
               onChange={(e) => setNewVendorName(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#24231f] focus:outline-none focus:ring-2 focus:ring-[#405b49]"
+              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#1f1e1a] focus:outline-none focus:ring-2 focus:ring-[#354c3c]"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#5d5b53] mb-1">Quote (₹)</label>
+            <label htmlFor="newVendorQuoteInput" className="block text-xs font-semibold text-[#1f1e1a] mb-1">Quote (₹)</label>
             <input
+              id="newVendorQuoteInput"
               type="number"
               min="0"
               step="500"
               value={newQuote}
               onChange={(e) => setNewQuote(Number(e.target.value))}
-              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#24231f] focus:outline-none focus:ring-2 focus:ring-[#405b49]"
+              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#1f1e1a] focus:outline-none focus:ring-2 focus:ring-[#354c3c]"
             />
           </div>
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex-1 h-9 rounded-lg bg-[#405b49] text-white text-xs font-semibold transition-colors hover:bg-[#324838] cursor-pointer"
+              className="flex-1 h-9 rounded-lg bg-[#354c3c] text-white text-xs font-semibold transition-colors hover:bg-[#28392e] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#9c4f2b]"
             >
               Save vendor
             </button>
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="px-3 h-9 rounded-lg bg-white border border-[#dedad0] text-xs font-semibold text-[#79776f] hover:text-[#24231f] cursor-pointer"
+              className="px-3 h-9 rounded-lg bg-white border border-[#dedad0] text-xs font-semibold text-[#57554e] hover:text-[#1f1e1a] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#354c3c]"
             >
               Cancel
             </button>
@@ -203,22 +218,22 @@ export const VendorChecklist: React.FC<VendorChecklistProps> = ({
         </form>
       )}
 
-      {/* Responsive Table */}
+      {/* Responsive Table with Full ARIA Semantics */}
       <div className="overflow-x-auto border border-[#efede6] rounded-xl">
-        <table className="w-full text-left text-xs border-collapse">
+        <table className="w-full text-left text-xs border-collapse" aria-label="Vendor quotations and booking status">
           <thead>
-            <tr className="bg-[#f9f8f4] border-b border-[#e9e5db] text-[#79776f] font-semibold text-[11px]">
-              <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Vendor / contact</th>
-              <th className="py-3 px-4 w-36">Quote (₹)</th>
-              <th className="py-3 px-4 w-44">Status</th>
-              <th className="py-3 px-2 w-10 text-center"></th>
+            <tr className="bg-[#f9f8f4] border-b border-[#e9e5db] text-[#57554e] font-semibold text-[11px]">
+              <th scope="col" className="py-3 px-4">Category</th>
+              <th scope="col" className="py-3 px-4">Vendor / contact</th>
+              <th scope="col" className="py-3 px-4 w-36">Quote (₹)</th>
+              <th scope="col" className="py-3 px-4 w-44">Status</th>
+              <th scope="col" className="py-3 px-2 w-10 text-center"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f2efe9]">
             {filteredVendors.map(({ v, originalIdx }) => (
               <tr key={originalIdx} className="hover:bg-[#fcfbf7] transition-colors">
-                <td className="py-2.5 px-4 font-semibold text-[#24231f] whitespace-nowrap">
+                <td className="py-2.5 px-4 font-semibold text-[#1f1e1a] whitespace-nowrap">
                   {v.category}
                 </td>
                 <td className="py-2.5 px-4">
@@ -226,32 +241,35 @@ export const VendorChecklist: React.FC<VendorChecklistProps> = ({
                     type="text"
                     value={v.vendor}
                     placeholder="Enter vendor name or phone"
+                    aria-label={`Vendor name for ${v.category}`}
                     onChange={(e) => onUpdateVendor(originalIdx, { vendor: e.target.value })}
-                    className="w-full h-8 px-2.5 rounded-lg border border-[#dedad0] bg-[#fffefa] text-xs text-[#24231f] focus:outline-none focus:ring-1 focus:ring-[#405b49]"
+                    className="w-full h-8 px-2.5 rounded-lg border border-[#dedad0] bg-[#fffefa] text-xs text-[#1f1e1a] focus:outline-none focus:ring-1 focus:ring-[#354c3c]"
                   />
                 </td>
                 <td className="py-2.5 px-4">
                   <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#79776f]">₹</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#57554e]" aria-hidden="true">₹</span>
                     <input
                       type="number"
                       min="0"
                       step="500"
                       value={v.quote}
+                      aria-label={`Quote amount in rupees for ${v.category}`}
                       onChange={(e) => onUpdateVendor(originalIdx, { quote: Math.max(0, Number(e.target.value)) })}
-                      className="w-full h-8 pl-6 pr-2 rounded-lg border border-[#dedad0] bg-[#fffefa] text-xs font-semibold text-right text-[#24231f] focus:outline-none focus:ring-1 focus:ring-[#405b49]"
+                      className="w-full h-8 pl-6 pr-2 rounded-lg border border-[#dedad0] bg-[#fffefa] text-xs font-semibold text-right text-[#1f1e1a] focus:outline-none focus:ring-1 focus:ring-[#354c3c]"
                     />
                   </div>
                 </td>
                 <td className="py-2.5 px-4">
                   <select
                     value={v.status}
+                    aria-label={`Booking status for ${v.category}`}
                     onChange={(e) => onUpdateVendor(originalIdx, { status: e.target.value as VendorStatus })}
                     className={`h-8 px-2.5 rounded-lg text-xs font-semibold border ${
                       STATUS_COLORS[v.status]?.border || 'border-[#dedad0]'
                     } ${STATUS_COLORS[v.status]?.bg || 'bg-white'} ${
-                      STATUS_COLORS[v.status]?.text || 'text-[#24231f]'
-                    } focus:outline-none focus:ring-1 focus:ring-[#405b49] cursor-pointer`}
+                      STATUS_COLORS[v.status]?.text || 'text-[#1f1e1a]'
+                    } focus:outline-none focus:ring-1 focus:ring-[#354c3c] cursor-pointer`}
                   >
                     <option value="Not contacted">Not contacted</option>
                     <option value="Contacted">Contacted</option>
@@ -264,10 +282,11 @@ export const VendorChecklist: React.FC<VendorChecklistProps> = ({
                   {plan.vendors.length > 1 && (
                     <button
                       onClick={() => onDeleteVendor(originalIdx)}
-                      title="Remove vendor row"
-                      className="p-1 text-[#9b988e] hover:text-[#b43924] rounded transition-colors cursor-pointer"
+                      title={`Remove vendor row for ${v.category}`}
+                      aria-label={`Remove vendor row for ${v.category}`}
+                      className="p-1 text-[#57554e] hover:text-[#b43924] rounded transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#9c4f2b]"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   )}
                 </td>
@@ -276,11 +295,11 @@ export const VendorChecklist: React.FC<VendorChecklistProps> = ({
 
             {filteredVendors.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-xs text-[#79776f]">
+                <td colSpan={5} className="py-8 text-center text-xs text-[#57554e]">
                   No vendors found matching "{searchQuery}".{' '}
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="text-[#405b49] font-semibold underline ml-1 cursor-pointer"
+                    className="text-[#354c3c] font-semibold underline ml-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#9c4f2b]"
                   >
                     Clear filter
                   </button>

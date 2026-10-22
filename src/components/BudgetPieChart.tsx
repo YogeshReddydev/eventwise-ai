@@ -143,19 +143,24 @@ export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, tota
         </div>
       </div>
 
-      {/* Compact Interactive Legend */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-4 w-full text-xs">
+      {/* Compact Interactive Accessible Legend */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-4 w-full text-xs" role="list" aria-label="Budget categories legend">
         {categories.map((c, i) => {
           const isHovered = hoveredIdx === i;
           const color = CATEGORY_COLORS[c.name] || DEFAULT_FALLBACK_COLOR;
           const pct = totalAmount > 0 ? ((c.amount / totalAmount) * 100).toFixed(0) : '0';
 
           return (
-            <div
+            <button
+              type="button"
               key={c.name}
+              role="listitem"
+              onFocus={() => setHoveredIdx(i)}
+              onBlur={() => setHoveredIdx(null)}
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
-              className={`flex items-center justify-between px-2 py-1 rounded-lg cursor-pointer transition-all ${
+              aria-label={`${c.name}: ${formatINR(c.amount)} (${pct}% of planned budget)`}
+              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition-all text-left focus:outline-none focus:ring-2 focus:ring-[#354c3c] ${
                 isHovered ? 'bg-[#f4f2ea] shadow-2xs' : 'hover:bg-[#faf9f4]'
               }`}
             >
@@ -179,7 +184,7 @@ export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, tota
               <span className="text-[10px] text-[#57554e] font-mono ml-1 shrink-0 font-medium">
                 {pct}%
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
