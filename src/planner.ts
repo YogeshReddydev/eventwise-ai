@@ -1,4 +1,12 @@
-import { BudgetCategory, EventPlan, PlanningTask, VendorItem } from './types.ts';
+import {
+  BudgetCategory,
+  EventPlan,
+  PlanningTask,
+  VendorItem,
+  PlannerValidationError,
+  PlanRecoveryError,
+  RecoveryChangeType,
+} from './types.ts';
 
 export const DEFAULT_CATEGORIES: BudgetCategory[] = [
   { name: 'Venue', amount: 22000, essential: true },
@@ -29,6 +37,9 @@ const MAX_BUDGET_LIMIT = 1_000_000_000; // ₹100 Crores
 const MAX_GUEST_LIMIT = 1_000_000;
 const MAX_DAYS_LIMIT = 3_650; // 10 years
 
+/**
+ * Safely converts input to a 2-decimal rounded number or returns NaN.
+ */
 export function money(value: number | string): number {
   const num = Number(value);
   if (!Number.isFinite(num)) {
@@ -37,6 +48,9 @@ export function money(value: number | string): number {
   return Math.round(num * 100) / 100;
 }
 
+/**
+ * Formats a numeric value into INR currency representation.
+ */
 export function formatINR(val: number | string): string {
   const num = Number(val) || 0;
   return new Intl.NumberFormat('en-IN', {
@@ -46,6 +60,21 @@ export function formatINR(val: number | string): string {
   }).format(num);
 }
 
+/**
+ * Ensures a contingency category exists in the categories array.
+ */
+function getOrCreateContingency(categories: BudgetCategory[]): BudgetCategory {
+  let contingency = categories.find((c) => c.name === 'Contingency');
+  if (!contingency) {
+    contingency = { name: 'Contingency', amount: 0, essential: true };
+    categories.push(contingency);
+  }
+  return contingency;
+}
+
+/**
+ * Builds a deterministic initial event plan given constraints.
+ */
 export function buildPlan(
   budgetInput: number | string = 100000,
   guestsInput: number | string = 150,
@@ -66,17 +95,17 @@ export function buildPlan(
     !Number.isInteger(guests) ||
     !Number.isInteger(days)
   ) {
-    throw new Error('Budget must be positive, guests at least 1, and days cannot be negative.');
+    throw new PlannerValidationError('Budget must be positive, guests at least 1, and days cannot be negative.');
   }
 
   if (budget > MAX_BUDGET_LIMIT) {
-    throw new Error(`Budget cannot exceed ₹${MAX_BUDGET_LIMIT.toLocaleString('en-IN')}.`);
+    throw new PlannerValidationError(`Budget cannot exceed ₹${MAX_BUDGET_LIMIT.toLocaleString('en-IN')}.`);
   }
   if (guests > MAX_GUEST_LIMIT) {
-    throw new Error(`Guest count cannot exceed ${MAX_GUEST_LIMIT.toLocaleString('en-IN')}.`);
+    throw new PlannerValidationError(`Guest count cannot exceed ${MAX_GUEST_LIMIT.toLocaleString('en-IN')}.`);
   }
   if (days > MAX_DAYS_LIMIT) {
-    throw new Error(`Days until event cannot exceed ${MAX_DAYS_LIMIT} days.`);
+    throw new PlannerValidationError(`Days until event cannot exceed ${MAX_DAYS_LIMIT} days.`);
   }
 
   const sanitizedEventType = String(eventType || 'Wedding').trim().slice(0, 80);
@@ -132,14 +161,17 @@ export function buildPlan(
   };
 }
 
+/**
+ * Rebalances a plan in response to a change without mutating the input plan.
+ */
 export function recoverPlan(
   plan: EventPlan,
-  changeType: string,
+  changeType: RecoveryChangeType | string,
   value: number | string,
   category?: string
 ): EventPlan {
   if (!plan || !Array.isArray(plan.categories) || plan.categories.length === 0) {
-    throw new Error('Valid event plan is required for plan recovery.');
+    throw new PlanRecoveryError('Valid event plan is required for plan recovery.');
   }
 
   // Guarantee source plan immutability through strict deep copy
@@ -149,10 +181,10 @@ export function recoverPlan(
   if (changeType === 'budget') {
     const newBudget = money(value);
     if (!Number.isFinite(newBudget) || newBudget <= 0) {
-      throw new Error('New budget must be greater than zero.');
+      throw new PlanRecoveryError('New budget must be greater than zero.');
     }
     if (newBudget > MAX_BUDGET_LIMIT) {
-      throw new Error(`New budget cannot exceed ₹${MAX_BUDGET_LIMIT.toLocaleString('en-IN')}.`);
+      throw new PlanRecoveryError(`New budget cannot exceed ₹${MAX_BUDGET_LIMIT.toLocaleString('en-IN')}.`);
     }
 
     const oldBudget = updated.budget;
@@ -173,13 +205,14 @@ export function recoverPlan(
       }
 
       for (let i = pool.length - 1; i >= 0; i--) {
-        if (remaining <= 0) break;
-        const cut = Math.min(pool[i].amount, remaining);
-        pool[i].amount -= cut;
+        const candidate = pool[i];
+        if (!candidate || remaining <= 0) break;
+        const cut = Math.min(candidate.amount, remaining);
+        candidate.amount -= cut;
         remaining -= cut;
       }
 
-      const contingency = updated.categories.find((c) => c.name === 'Contingency')!;
+      const contingency = getOrCreateContingency(updated.categories);
       const otherTotal = updated.categories
         .filter((c) => c !== contingency)
         .reduce((sum, c) => sum + c.amount, 0);
@@ -189,7 +222,7 @@ export function recoverPlan(
       );
     } else {
       const extra = newBudget - oldBudget;
-      const contingency = updated.categories.find((c) => c.name === 'Contingency')!;
+      const contingency = getOrCreateContingency(updated.categories);
       contingency.amount += extra;
       notes.push(
         `Budget increased by ₹${extra.toLocaleString('en-IN')}; the additional amount is held in contingency until you assign it.`
@@ -199,13 +232,13 @@ export function recoverPlan(
   } else if (changeType === 'vendor_increase') {
     const increase = money(value);
     if (!Number.isFinite(increase) || increase <= 0) {
-      throw new Error('Vendor increase must be greater than zero.');
+      throw new PlanRecoveryError('Vendor increase must be greater than zero.');
     }
     if (!category || !updated.categories.some((c) => c.name === category)) {
-      throw new Error('Please select a valid event category for the vendor quote increase.');
+      throw new PlanRecoveryError('Please select a valid event category for the vendor quote increase.');
     }
 
-    const contingency = updated.categories.find((c) => c.name === 'Contingency')!;
+    const contingency = getOrCreateContingency(updated.categories);
     const covered = Math.min(contingency.amount, increase);
     contingency.amount -= covered;
     let shortfall = increase - covered;
@@ -236,22 +269,24 @@ export function recoverPlan(
   } else if (changeType === 'guests') {
     const newGuests = Number(value);
     if (!Number.isFinite(newGuests) || !Number.isInteger(newGuests) || newGuests < 1) {
-      throw new Error('Guest count must be at least one.');
+      throw new PlanRecoveryError('Guest count must be at least one.');
     }
     if (newGuests > MAX_GUEST_LIMIT) {
-      throw new Error(`Guest count cannot exceed ${MAX_GUEST_LIMIT.toLocaleString('en-IN')}.`);
+      throw new PlanRecoveryError(`Guest count cannot exceed ${MAX_GUEST_LIMIT.toLocaleString('en-IN')}.`);
     }
 
     const oldGuests = updated.guests;
     updated.guests = newGuests;
     const delta = newGuests - oldGuests;
-    const catering = updated.categories.find((c) => c.name === 'Catering')!;
-    const estimatedDelta = Math.round((catering.amount / Math.max(1, oldGuests)) * delta);
+    const catering = updated.categories.find((c) => c.name === 'Catering');
+    const estimatedDelta = catering
+      ? Math.round((catering.amount / Math.max(1, oldGuests)) * delta)
+      : 0;
     notes.push(
       `Guest count changed from ${oldGuests} to ${newGuests}. Catering may change by approximately ₹${estimatedDelta.toLocaleString('en-IN')}; this is an estimate, not a vendor quote.`
     );
   } else {
-    throw new Error('Unsupported change type.');
+    throw new PlanRecoveryError('Unsupported change type.');
   }
 
   updated.per_guest_budget = Math.round((updated.budget / updated.guests) * 100) / 100;

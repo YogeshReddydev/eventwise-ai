@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Sparkles, User } from 'lucide-react';
+import { Send, Sparkles, User } from 'lucide-react';
 import { EventPlan } from '../types.ts';
 
 interface Message {

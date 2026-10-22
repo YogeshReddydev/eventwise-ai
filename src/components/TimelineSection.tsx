@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Calendar, CheckCircle2, Clock, Plus, Tag } from 'lucide-react';
-import { EventPlan, PlanningTask, Priority } from '../types.ts';
+import { Clock, Plus } from 'lucide-react';
+import { EventPlan, PlanningTask } from '../types.ts';
 import { AddTaskModal } from './AddTaskModal.tsx';
 
 interface TimelineSectionProps {

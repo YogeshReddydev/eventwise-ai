@@ -19,7 +19,7 @@ export default defineConfig(() => {
       chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
-          manualChunks(id: string) {
+          manualChunks(id: string): string | void {
             if (id.includes('node_modules/recharts')) {
               return 'vendor-recharts';
             }
@@ -32,6 +32,7 @@ export default defineConfig(() => {
             if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
               return 'vendor-react';
             }
+            return undefined;
           },
         },
       },

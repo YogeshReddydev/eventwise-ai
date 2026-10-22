@@ -11,7 +11,6 @@ import {
   createServerApp,
   BoundedCache,
   BoundedRateLimiter,
-  planCache,
 } from '../server.ts';
 import { buildPlan } from '../src/planner.ts';
 
@@ -43,7 +42,7 @@ describe('TypeScript Server & API Integration Tests', () => {
     return { status: res.status, data, headers: res.headers };
   }
 
-  async function apiPost(path: string, body: any, customHeaders: Record<string, string> = {}) {
+  async function apiPost(path: string, body: unknown, customHeaders: Record<string, string> = {}) {
     const res = await fetch(`${baseUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...customHeaders },
@@ -70,7 +69,7 @@ describe('TypeScript Server & API Integration Tests', () => {
     assert.equal(data.budget, 100000);
     assert.equal(data.guests, 150);
     assert.equal(data.event_type, 'Wedding');
-    const total = data.categories.reduce((sum: number, c: any) => sum + c.amount, 0);
+    const total = data.categories.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0);
     assert.equal(total, 100000);
     assert.ok(headers.get('cache-control')?.includes('public'));
   });
@@ -123,8 +122,8 @@ describe('TypeScript Server & API Integration Tests', () => {
       category: 'Catering',
     });
     assert.equal(status, 200);
-    const catering = data.categories.find((c: any) => c.name === 'Catering');
-    const contingency = data.categories.find((c: any) => c.name === 'Contingency');
+    const catering = data.categories.find((c: { name: string; amount: number }) => c.name === 'Catering');
+    const contingency = data.categories.find((c: { name: string; amount: number }) => c.name === 'Contingency');
     assert.equal(catering.amount, 36000); // 30,000 + 6,000
     assert.equal(contingency.amount, 4000); // 10,000 - 6,000
   });

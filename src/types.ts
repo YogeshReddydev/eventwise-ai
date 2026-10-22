@@ -1,5 +1,20 @@
 export type Priority = 'High' | 'Medium' | 'Low';
 export type VendorStatus = 'Not contacted' | 'Contacted' | 'Quote received' | 'Booked' | 'Paid';
+export type RecoveryChangeType = 'budget' | 'vendor_increase' | 'guests';
+
+export class PlannerValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PlannerValidationError';
+  }
+}
+
+export class PlanRecoveryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PlanRecoveryError';
+  }
+}
 
 export interface BudgetCategory {
   name: string;
@@ -40,3 +55,4 @@ export interface AssistantResponse {
   mode: 'gemini' | 'demo' | 'fallback';
   answer: string;
 }
+

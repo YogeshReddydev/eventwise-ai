@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Check, Download, Plus, Search, Trash2, Users, X } from 'lucide-react';
+import { Download, Plus, Search, Trash2, X } from 'lucide-react';
 import { EventPlan, VendorItem, VendorStatus } from '../types.ts';
 import { formatINR } from '../planner.ts';
 

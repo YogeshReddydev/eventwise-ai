@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, Check, Info, ListFilter, PieChart as PieChartIcon } from 'lucide-react';
+import { AlertCircle, Info, ListFilter, PieChart as PieChartIcon } from 'lucide-react';
 import { EventPlan } from '../types.ts';
 import { formatINR } from '../planner.ts';
 import { BudgetPieChart } from './BudgetPieChart.tsx';

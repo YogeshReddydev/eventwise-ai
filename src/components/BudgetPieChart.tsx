@@ -26,8 +26,8 @@ export const BudgetPieChart: React.FC<BudgetPieChartProps> = ({ categories, tota
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const totalAmount = useMemo(
-    () => categories.reduce((sum, c) => sum + c.amount, 0),
-    [categories]
+    () => (totalBudget > 0 ? totalBudget : categories.reduce((sum, c) => sum + c.amount, 0)),
+    [categories, totalBudget]
   );
 
   const width = 240;

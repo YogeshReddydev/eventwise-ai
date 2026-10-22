@@ -1,7 +1,6 @@
 import React from 'react';
-import { Calendar, CheckCircle2, DollarSign, Download, Printer, RefreshCw, Sparkles, Users } from 'lucide-react';
+import { Download, Printer, RefreshCw } from 'lucide-react';
 import { EventPlan } from '../types.ts';
-import { formatINR } from '../planner.ts';
 
 interface NavbarProps {
   plan: EventPlan | null;

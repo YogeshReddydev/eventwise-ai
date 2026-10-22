@@ -111,15 +111,16 @@ export class BoundedRateLimiter {
   }
 
   middleware() {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction): void => {
       // Safely determine client IP from socket remoteAddress without trusting spoofable forward headers
       const rawIp = req.socket.remoteAddress || '127.0.0.1';
       const ip = rawIp.replace(/^::ffff:/, '');
       const { allowed } = this.check(ip);
       if (!allowed) {
-        return res.status(429).json({
+        res.status(429).json({
           error: 'Too many requests. Please slow down and try again shortly.',
         });
+        return;
       }
       next();
     };
@@ -146,7 +147,7 @@ cleanupTimer.unref?.();
 /**
  * Creates and configures the Express application.
  */
-export function createServerApp(options: { skipVite?: boolean } = {}) {
+export function createServerApp(_options: { skipVite?: boolean } = {}) {
   const app = express();
 
   // Security Headers Middleware

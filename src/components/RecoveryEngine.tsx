@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, Sparkles, TrendingDown, TrendingUp, Undo2 } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check } from 'lucide-react';
 import { EventPlan } from '../types.ts';
 import { formatINR } from '../planner.ts';
 

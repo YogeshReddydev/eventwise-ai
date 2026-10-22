@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { EventPlan, PlanningTask, VendorItem } from './types.ts';
 import { buildPlan } from './planner.ts';
 import { Navbar } from './components/Navbar.tsx';

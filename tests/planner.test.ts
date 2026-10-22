@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildPlan, recoverPlan, formatINR, money } from '../src/planner.ts';
+import { PlannerValidationError, PlanRecoveryError, EventPlan } from '../src/types.ts';
 
 describe('TypeScript Planner Logic Tests', () => {
   it('builds default wedding plan with exact sum and categories', () => {
@@ -40,15 +41,15 @@ describe('TypeScript Planner Logic Tests', () => {
     }
   });
 
-  it('rejects invalid inputs with descriptive errors', () => {
-    assert.throws(() => buildPlan(0, 100, 30), /Budget must be positive/);
-    assert.throws(() => buildPlan(-5000, 100, 30), /Budget must be positive/);
-    assert.throws(() => buildPlan(100000, 0, 30), /guests at least 1/);
-    assert.throws(() => buildPlan(100000, -5, 30), /guests at least 1/);
-    assert.throws(() => buildPlan(100000, 100, -1), /days cannot be negative/);
-    assert.throws(() => buildPlan('abc' as any, 100, 30), /Budget must be positive/);
-    assert.throws(() => buildPlan(100000, 150.5, 30), /guests at least 1/);
-    assert.throws(() => buildPlan(100000, 150, 30.5), /days cannot be negative/);
+  it('rejects invalid inputs with descriptive errors and PlannerValidationError', () => {
+    assert.throws(() => buildPlan(0, 100, 30), (err: unknown) => err instanceof PlannerValidationError && /Budget must be positive/.test(err.message));
+    assert.throws(() => buildPlan(-5000, 100, 30), (err: unknown) => err instanceof PlannerValidationError && /Budget must be positive/.test(err.message));
+    assert.throws(() => buildPlan(100000, 0, 30), (err: unknown) => err instanceof PlannerValidationError && /guests at least 1/.test(err.message));
+    assert.throws(() => buildPlan(100000, -5, 30), (err: unknown) => err instanceof PlannerValidationError && /guests at least 1/.test(err.message));
+    assert.throws(() => buildPlan(100000, 100, -1), (err: unknown) => err instanceof PlannerValidationError && /days cannot be negative/.test(err.message));
+    assert.throws(() => buildPlan('abc' as unknown as number, 100, 30), (err: unknown) => err instanceof PlannerValidationError && /Budget must be positive/.test(err.message));
+    assert.throws(() => buildPlan(100000, 150.5, 30), (err: unknown) => err instanceof PlannerValidationError && /guests at least 1/.test(err.message));
+    assert.throws(() => buildPlan(100000, 150, 30.5), (err: unknown) => err instanceof PlannerValidationError && /days cannot be negative/.test(err.message));
   });
 
   it('rejects values exceeding maximum safety limits', () => {
@@ -121,10 +122,19 @@ describe('TypeScript Planner Logic Tests', () => {
     assert.ok(proposed.recovery_notes && proposed.recovery_notes[0].includes('Catering may change'));
   });
 
-  it('rejects recoverPlan calls with invalid or null plan', () => {
-    assert.throws(() => recoverPlan(null as any, 'budget', 50000), /Valid event plan is required/);
-    assert.throws(() => recoverPlan({} as any, 'budget', 50000), /Valid event plan is required/);
-    assert.throws(() => recoverPlan({ categories: [] } as any, 'budget', 50000), /Valid event plan is required/);
+  it('rejects recoverPlan calls with invalid or null plan and throws PlanRecoveryError', () => {
+    assert.throws(
+      () => recoverPlan(null as unknown as EventPlan, 'budget', 50000),
+      (err: unknown) => err instanceof PlanRecoveryError && /Valid event plan is required/.test(err.message)
+    );
+    assert.throws(
+      () => recoverPlan({} as unknown as EventPlan, 'budget', 50000),
+      (err: unknown) => err instanceof PlanRecoveryError && /Valid event plan is required/.test(err.message)
+    );
+    assert.throws(
+      () => recoverPlan({ categories: [] } as unknown as EventPlan, 'budget', 50000),
+      (err: unknown) => err instanceof PlanRecoveryError && /Valid event plan is required/.test(err.message)
+    );
   });
 
   it('correctly formats currency with formatINR and handles money helper', () => {

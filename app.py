@@ -73,6 +73,13 @@ def build_plan(budget=100000, guests=150, days=60, event_type="Wedding"):
             "vendors": [{"category": x["name"], "vendor": "", "quote": x["amount"], "status": "Not contacted"} for x in categories if x["name"] != "Contingency"],
             "assumptions": ["All prices are illustrative estimates, not live market quotes.", "A contingency allocation is included in the initial budget model.", "Dates are generated relative to the day the plan is created."]}
 
+def _get_or_create_contingency(categories: list[dict]) -> dict:
+    contingency = next((c for c in categories if c.get("name") == "Contingency"), None)
+    if not contingency:
+        contingency = {"name": "Contingency", "amount": 0, "essential": True}
+        categories.append(contingency)
+    return contingency
+
 def recover_plan(plan, change_type, value, category=None):
     """Return a proposed plan without mutating the original plan."""
     if not plan or not isinstance(plan.get("categories"), list):
@@ -97,12 +104,12 @@ def recover_plan(plan, change_type, value, category=None):
             for item in reversed(pool):
                 if remaining <= 0: break
                 cut = min(item["amount"], remaining); item["amount"] -= cut; remaining -= cut
-            contingency = next(c for c in updated["categories"] if c["name"] == "Contingency")
+            contingency = _get_or_create_contingency(updated["categories"])
             contingency["amount"] = max(0, new_budget - sum(c["amount"] for c in updated["categories"] if c is not contingency))
             notes.append(f"Budget reduced by ₹{reduction:,.0f}. Flexible categories were adjusted first; review the proposed cuts before accepting.")
         else:
             extra = new_budget - old_budget
-            next(c for c in updated["categories"] if c["name"] == "Contingency")["amount"] += extra
+            _get_or_create_contingency(updated["categories"])["amount"] += extra
             notes.append(f"Budget increased by ₹{extra:,.0f}; the additional amount is held in contingency until you assign it.")
         updated["budget"] = new_budget
     elif change_type == "vendor_increase":
@@ -110,7 +117,7 @@ def recover_plan(plan, change_type, value, category=None):
         if increase <= 0: raise ValueError("Vendor increase must be greater than zero.")
         if not category or not any(c["name"] == category for c in updated["categories"]):
             raise ValueError("Please select a valid event category for the vendor quote increase.")
-        contingency = next(c for c in updated["categories"] if c["name"] == "Contingency")
+        contingency = _get_or_create_contingency(updated["categories"])
         covered = min(contingency["amount"], increase); contingency["amount"] -= covered
         shortfall = increase - covered
         if shortfall:
@@ -133,8 +140,9 @@ def recover_plan(plan, change_type, value, category=None):
         if new_guests > MAX_GUEST_LIMIT: raise ValueError("Guest count exceeds limit.")
         old_guests = updated["guests"]; updated["guests"] = new_guests
         delta = new_guests - old_guests
-        catering = next(c for c in updated["categories"] if c["name"] == "Catering")
-        estimated_delta = round((catering["amount"] / max(1, old_guests)) * delta)
+        catering = next((c for c in updated["categories"] if c["name"] == "Catering"), None)
+        catering_amount = catering["amount"] if catering else 0
+        estimated_delta = round((catering_amount / max(1, old_guests)) * delta)
         notes.append(f"Guest count changed from {old_guests} to {new_guests}. Catering may change by approximately ₹{estimated_delta:,.0f}; this is an estimate, not a vendor quote.")
     else:
         raise ValueError("Unsupported change type.")
