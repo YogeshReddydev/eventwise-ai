@@ -1,0 +1,7 @@
+{
+  "name": "EventWise AI",
+  "description": "A budget-aware, GenAI-powered event planning assistant with a Plan Recovery Engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

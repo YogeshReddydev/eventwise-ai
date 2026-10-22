@@ -1,0 +1,304 @@
+import React, { useState } from 'react';
+import { Check, Download, Plus, Search, Trash2, Users, X } from 'lucide-react';
+import { EventPlan, VendorItem, VendorStatus } from '../types.ts';
+import { formatINR } from '../planner.ts';
+
+interface VendorChecklistProps {
+  plan: EventPlan;
+  onUpdateVendor: (index: number, updated: Partial<VendorItem>) => void;
+  onAddVendor: (vendor: VendorItem) => void;
+  onDeleteVendor: (index: number) => void;
+}
+
+const STATUS_COLORS: Record<VendorStatus, { bg: string; text: string; border: string }> = {
+  'Not contacted': { bg: 'bg-[#f4f2ec]', text: 'text-[#6f6b61]', border: 'border-[#dedad0]' },
+  'Contacted': { bg: 'bg-[#edf4f9]', text: 'text-[#20577d]', border: 'border-[#d0e0ed]' },
+  'Quote received': { bg: 'bg-[#fef6e9]', text: 'text-[#8c5a1a]', border: 'border-[#fae3c3]' },
+  'Booked': { bg: 'bg-[#eaf5ed]', text: 'text-[#276639]', border: 'border-[#c6e6cf]' },
+  'Paid': { bg: 'bg-[#405b49]', text: 'text-white', border: 'border-[#405b49]' },
+};
+
+export const VendorChecklist: React.FC<VendorChecklistProps> = ({
+  plan,
+  onUpdateVendor,
+  onAddVendor,
+  onDeleteVendor,
+}) => {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [newCategory, setNewCategory] = useState('Decorations');
+  const [newVendorName, setNewVendorName] = useState('');
+  const [newQuote, setNewQuote] = useState(10000);
+
+  const totalCommitted = plan.vendors.reduce((sum, v) => sum + (v.quote || 0), 0);
+  const bookedCount = plan.vendors.filter((v) => v.status === 'Booked' || v.status === 'Paid').length;
+
+  const filteredVendors = plan.vendors
+    .map((v, originalIdx) => ({ v, originalIdx }))
+    .filter(({ v }) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        v.category.toLowerCase().includes(q) ||
+        (v.vendor && v.vendor.toLowerCase().includes(q))
+      );
+    });
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAddVendor({
+      category: newCategory,
+      vendor: newVendorName.trim() || 'Pending vendor',
+      quote: newQuote,
+      status: 'Contacted',
+    });
+    setNewVendorName('');
+    setShowAddForm(false);
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Category', 'Vendor / Contact', 'Quote (INR)', 'Status'];
+    const escapeCsv = (str: string | number) => {
+      const s = String(str ?? '');
+      if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const vendorsToExport = searchQuery.trim()
+      ? filteredVendors.map((item) => item.v)
+      : plan.vendors;
+
+    const rows = vendorsToExport.map((v) => [
+      escapeCsv(v.category),
+      escapeCsv(v.vendor || 'Unassigned'),
+      escapeCsv(v.quote),
+      escapeCsv(v.status),
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `eventwise-vendors-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section className="bg-white rounded-2xl border border-[#e9e5db] p-6 sm:p-8 mb-8 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#bd7651]">
+            People who make it happen
+          </span>
+          <h2 className="text-xl sm:text-2xl font-serif text-[#24231f]">Vendor checklist</h2>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="text-xs text-[#5d5b53] hidden md:block">
+            <span className="font-semibold text-[#24231f]">{bookedCount}</span> of{' '}
+            <span className="font-semibold text-[#24231f]">{plan.vendors.length}</span> confirmed
+          </div>
+          <button
+            onClick={handleExportCSV}
+            title={searchQuery.trim() ? "Export filtered vendors as CSV file" : "Export vendor table as CSV file"}
+            className="button secondary"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="button primary"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add vendor</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Search Input Field */}
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-[#79776f] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search vendors by name or category..."
+            className="w-full h-9 pl-9 pr-8 rounded-xl border border-[#dedbd1] bg-[#faf8f2] text-xs text-[#24231f] placeholder:text-[#969187] focus:outline-none focus:ring-2 focus:ring-[#405b49] focus:bg-white transition-all"
+            aria-label="Filter vendors by name or category"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#79776f] hover:text-[#24231f] p-0.5 rounded cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {searchQuery.trim() && (
+          <div className="text-xs text-[#79776f]">
+            Showing <strong>{filteredVendors.length}</strong> of {plan.vendors.length} vendors
+          </div>
+        )}
+      </div>
+
+      {showAddForm && (
+        <form onSubmit={handleAddSubmit} className="mb-6 p-4 rounded-xl bg-[#faf8f2] border border-[#e8e4d8] grid grid-cols-1 sm:grid-cols-4 gap-3 items-end animate-fadeIn">
+          <div>
+            <label className="block text-xs font-semibold text-[#5d5b53] mb-1">Category</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. DJ & Sound"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#24231f] focus:outline-none focus:ring-2 focus:ring-[#405b49]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#5d5b53] mb-1">Vendor / contact name</label>
+            <input
+              type="text"
+              placeholder="e.g. Rhythm Beats Studio"
+              value={newVendorName}
+              onChange={(e) => setNewVendorName(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#24231f] focus:outline-none focus:ring-2 focus:ring-[#405b49]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#5d5b53] mb-1">Quote (₹)</label>
+            <input
+              type="number"
+              min="0"
+              step="500"
+              value={newQuote}
+              onChange={(e) => setNewQuote(Number(e.target.value))}
+              className="w-full h-9 px-3 rounded-lg border border-[#dedad0] bg-white text-xs text-[#24231f] focus:outline-none focus:ring-2 focus:ring-[#405b49]"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="flex-1 h-9 rounded-lg bg-[#405b49] text-white text-xs font-semibold transition-colors hover:bg-[#324838] cursor-pointer"
+            >
+              Save vendor
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="px-3 h-9 rounded-lg bg-white border border-[#dedad0] text-xs font-semibold text-[#79776f] hover:text-[#24231f] cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Responsive Table */}
+      <div className="overflow-x-auto border border-[#efede6] rounded-xl">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="bg-[#f9f8f4] border-b border-[#e9e5db] text-[#79776f] font-semibold text-[11px]">
+              <th className="py-3 px-4">Category</th>
+              <th className="py-3 px-4">Vendor / contact</th>
+              <th className="py-3 px-4 w-36">Quote (₹)</th>
+              <th className="py-3 px-4 w-44">Status</th>
+              <th className="py-3 px-2 w-10 text-center"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#f2efe9]">
+            {filteredVendors.map(({ v, originalIdx }) => (
+              <tr key={originalIdx} className="hover:bg-[#fcfbf7] transition-colors">
+                <td className="py-2.5 px-4 font-semibold text-[#24231f] whitespace-nowrap">
+                  {v.category}
+                </td>
+                <td className="py-2.5 px-4">
+                  <input
+                    type="text"
+                    value={v.vendor}
+                    placeholder="Enter vendor name or phone"
+                    onChange={(e) => onUpdateVendor(originalIdx, { vendor: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded-lg border border-[#dedad0] bg-[#fffefa] text-xs text-[#24231f] focus:outline-none focus:ring-1 focus:ring-[#405b49]"
+                  />
+                </td>
+                <td className="py-2.5 px-4">
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#79776f]">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="500"
+                      value={v.quote}
+                      onChange={(e) => onUpdateVendor(originalIdx, { quote: Math.max(0, Number(e.target.value)) })}
+                      className="w-full h-8 pl-6 pr-2 rounded-lg border border-[#dedad0] bg-[#fffefa] text-xs font-semibold text-right text-[#24231f] focus:outline-none focus:ring-1 focus:ring-[#405b49]"
+                    />
+                  </div>
+                </td>
+                <td className="py-2.5 px-4">
+                  <select
+                    value={v.status}
+                    onChange={(e) => onUpdateVendor(originalIdx, { status: e.target.value as VendorStatus })}
+                    className={`h-8 px-2.5 rounded-lg text-xs font-semibold border ${
+                      STATUS_COLORS[v.status]?.border || 'border-[#dedad0]'
+                    } ${STATUS_COLORS[v.status]?.bg || 'bg-white'} ${
+                      STATUS_COLORS[v.status]?.text || 'text-[#24231f]'
+                    } focus:outline-none focus:ring-1 focus:ring-[#405b49] cursor-pointer`}
+                  >
+                    <option value="Not contacted">Not contacted</option>
+                    <option value="Contacted">Contacted</option>
+                    <option value="Quote received">Quote received</option>
+                    <option value="Booked">Booked</option>
+                    <option value="Paid">Paid</option>
+                  </select>
+                </td>
+                <td className="py-2.5 px-2 text-center">
+                  {plan.vendors.length > 1 && (
+                    <button
+                      onClick={() => onDeleteVendor(originalIdx)}
+                      title="Remove vendor row"
+                      className="p-1 text-[#9b988e] hover:text-[#b43924] rounded transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+
+            {filteredVendors.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-xs text-[#79776f]">
+                  No vendors found matching "{searchQuery}".{' '}
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-[#405b49] font-semibold underline ml-1 cursor-pointer"
+                  >
+                    Clear filter
+                  </button>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#79776f]">
+        <p className="text-[11px] text-[#969187]">
+          No vendors are pre-verified or booked by this demo. Enter real details after confirming them.
+        </p>
+        <div className="font-semibold text-[#24231f]">
+          Total vendor quotes: <span className="font-mono">{formatINR(totalCommitted)}</span>
+        </div>
+      </div>
+    </section>
+  );
+};

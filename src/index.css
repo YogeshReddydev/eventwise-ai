@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --ink: #24231f;
+    --muted: #79776f;
+    --paper: #f7f5ef;
+    --card: #fffefa;
+    --line: #e9e5db;
+    --green: #405b49;
+    --green-soft: #e9eee8;
+    --orange: #bd7651;
+    --orange-soft: #fbf1ea;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: var(--serif);
+  }
+}
+
+/* Button styles matching EventWise UI */
+.button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: 600 12px var(--sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.15s, opacity 0.15s, background-color 0.15s;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:focus-visible {
+  outline: 3px solid #bd765188;
+  outline-offset: 2px;
+}
+
+.button.primary, .primary {
+  background: var(--green);
+  color: white;
+}
+
+.button.primary:hover {
+  background: #33493a;
+}
+
+.button.secondary, .secondary {
+  background: #ede9df;
+  color: var(--ink);
+}
+
+.button.secondary:hover {
+  background: #e2ded2;
+}
+
+/* Custom illustration elements matching original brand style */
+.sun {
+  position: absolute;
+  width: 135px;
+  height: 135px;
+  border-radius: 50%;
+  background: #ead9bf;
+  right: 55px;
+  top: 12px;
+}
+
+.arch {
+  position: absolute;
+  bottom: 0;
+  border: 1px solid #b8b29f;
+  border-bottom: 0;
+  border-radius: 140px 140px 0 0;
+}
+
+.arch-one {
+  height: 160px;
+  width: 116px;
+  right: 65px;
+  background: #e8e3d7;
+}
+
+.arch-two {
+  height: 112px;
+  width: 80px;
+  right: 83px;
+  background: #d7d9c9;
+}
+
+.flower {
+  position: absolute;
+  right: 30px;
+  top: 70px;
+  font-size: 55px;
+  color: #8b9a7b;
+  user-select: none;
+}
+
+/* Print styling for printing or saving event plan */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+  }
+  .panel {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+  }
+}

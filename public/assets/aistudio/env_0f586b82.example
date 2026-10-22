@@ -1,0 +1,4 @@
+# Optional: get a key from Google AI Studio. Never commit your real key.
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash
+PORT=5000

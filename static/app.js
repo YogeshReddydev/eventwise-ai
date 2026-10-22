@@ -1,0 +1,35 @@
+const $ = (id) => document.getElementById(id);
+let plan = null;
+const money = (n) => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0);
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function requestJSON(url, options={}) { const r=await fetch(url,options); const d=await r.json(); if(!r.ok) throw new Error(d.error||'Something went wrong.'); return d; }
+async function createPlan(){
+  $('createPlan').disabled=true;
+  try { plan=await requestJSON(`/api/plan?budget=${encodeURIComponent($('budget').value)}&guests=${encodeURIComponent($('guests').value)}&days=${encodeURIComponent($('days').value)}&event_type=${encodeURIComponent($('eventType').value)}`); render(); }
+  catch(e){alert(e.message)} finally{$('createPlan').disabled=false}
+}
+function render(){
+ $('metricBudget').textContent=money(plan.budget); $('metricPerGuest').textContent=money(plan.per_guest_budget); $('metricDays').textContent=plan.days_until_event; $('metricTasks').textContent=plan.tasks.length; updateTaskCount();
+ $('budgetTotal').textContent=money(plan.categories.reduce((s,c)=>s+c.amount,0));
+ $('budgetList').innerHTML=plan.categories.map((c,i)=>`<div class="budget-item"><div><div class="budget-label"><span>${escapeHtml(c.name)}</span><strong>${money(c.amount)}</strong></div><div class="bar"><span style="width:${Math.min(100,c.amount/Math.max(1,plan.budget)*100)}%"></span></div></div><input aria-label="${escapeHtml(c.name)} budget" type="number" min="0" value="${c.amount}" data-budget-index="${i}"></div>`).join('');
+ $('changeCategory').innerHTML=plan.categories.filter(c=>c.name!=='Contingency').map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
+ $('taskList').innerHTML=plan.tasks.map((t,i)=>`<label class="task"><input type="checkbox" data-task-index="${i}" ${t.done?'checked':''}><span><span class="task-title ${t.done?'done':''}">${escapeHtml(t.title)}</span><span class="task-meta">Due ${escapeHtml(t.due_date)} · ${escapeHtml(t.priority)} priority</span></span></label>`).join('');
+ $('timelineCount').textContent=`${plan.tasks.length} tasks`;
+ $('vendorRows').innerHTML=plan.vendors.map((v,i)=>`<tr><td>${escapeHtml(v.category)}</td><td><input data-vendor-name="${i}" aria-label="${escapeHtml(v.category)} vendor name" placeholder="Add vendor name" value="${escapeHtml(v.vendor)}"></td><td><input data-vendor-quote="${i}" aria-label="${escapeHtml(v.category)} quote" type="number" min="0" value="${v.quote}"></td><td><select data-vendor-status="${i}" aria-label="${escapeHtml(v.category)} booking status">${['Not contacted','Contacted','Quote received','Booked','Paid'].map(s=>`<option ${v.status===s?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('');
+}
+function updateTaskCount(){const done=plan.tasks.filter(t=>t.done).length;$('taskProgress').textContent=`${done} completed`}
+$('createPlan').addEventListener('click',createPlan);
+$('budgetList').addEventListener('change',e=>{const i=e.target.dataset.budgetIndex;if(i===undefined)return;const amount=Number(e.target.value);if(!Number.isFinite(amount)||amount<0){alert('Enter a valid non-negative amount.');render();return}plan.categories[i].amount=amount;$('budgetTotal').textContent=money(plan.categories.reduce((s,c)=>s+c.amount,0));$('metricBudget').textContent=money(plan.budget);});
+$('taskList').addEventListener('change',e=>{const i=e.target.dataset.taskIndex;if(i===undefined)return;plan.tasks[Number(i)].done=e.target.checked;e.target.nextElementSibling.querySelector('.task-title').classList.toggle('done',e.target.checked);updateTaskCount()});
+$('changeType').addEventListener('change',()=>{const t=$('changeType').value;$('changeValueLabel').innerHTML=(t==='budget'?'New total budget (₹)':t==='guests'?'New guest count':'Quote increase (₹)')+`<input id="changeValue" type="number" min="1" value="${t==='budget'?plan.budget:t==='guests'?plan.guests:12000}">`;$('categoryWrap').style.display=t==='vendor_increase'?'flex':'none'});
+$('recoverBtn').addEventListener('click',async()=>{const btn=$('recoverBtn');btn.disabled=true;try{const result=await requestJSON('/api/recover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,change_type:$('changeType').value,value:$('changeValue').value,category:$('changeCategory').value})});const notes=(result.recovery_notes||[]).map(n=>`<li>${escapeHtml(n)}</li>`).join('');$('recoveryResult').innerHTML=`<div class="approval">Proposed change · approval required</div><ul>${notes}</ul><p><b>Proposed budget:</b> ${money(result.budget)}<br><b>Budget per guest:</b> ${money(result.per_guest_budget)}</p><p>Review the updated allocation before accepting it. This preview has not replaced your current plan.</p><button class="button primary" id="acceptRecovery">Accept proposed plan</button>`;$('recoveryResult').classList.add('visible');$('acceptRecovery').addEventListener('click',()=>{plan=result;$('budget').value=plan.budget;$('guests').value=plan.guests;render();$('recoveryResult').innerHTML='<b>Plan updated.</b> The proposed recovery plan is now active.';});}catch(e){$('recoveryResult').innerHTML=escapeHtml(e.message);$('recoveryResult').classList.add('visible')}finally{btn.disabled=false}});
+$('chatForm').addEventListener('submit',async e=>{e.preventDefault();const input=$('question');const prompt=input.value.trim();if(!prompt)return;const log=$('chatLog');log.insertAdjacentHTML('beforeend',`<div class="bubble user">${escapeHtml(prompt)}</div>`);input.value='';const loading=document.createElement('div');loading.className='bubble assistant';loading.textContent='Thinking…';log.appendChild(loading);log.scrollTop=log.scrollHeight;try{const result=await requestJSON('/api/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,plan})});loading.textContent=result.answer;$('aiMode').textContent=result.mode==='gemini'?'Gemini AI suggestions are enabled. Check estimates with vendors.':result.mode==='fallback'?'Gemini is unavailable; local planning remains available.':'Local demo mode is active. Add a Gemini API key to enable generated suggestions.';}catch(err){loading.textContent=err.message}log.scrollTop=log.scrollHeight;});
+$('exportCsvBtn')?.addEventListener('click',()=>{
+  if(!plan||!plan.vendors)return;
+  const esc=(s)=>{const str=String(s??'');return (str.includes(',')||str.includes('"')||str.includes('\n'))?`"${str.replace(/"/g,'""')}"`:str};
+  const csv=['Category,Vendor / Contact,Quote (INR),Status',...plan.vendors.map(v=>[esc(v.category),esc(v.vendor||'Unassigned'),esc(v.quote),esc(v.status)].join(','))].join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`eventwise-vendors-${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(url);
+});
+createPlan();
